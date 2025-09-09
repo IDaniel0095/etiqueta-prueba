@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Etiqueta de Cumpleaños</title>
+  <style>
+    body { 
+      text-align: center; 
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+    }
+    #canvas {
+      border: 1px solid #ccc;
+      margin-top: 20px;
+    }
+    .botones {
+      margin-top: 15px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #ff9800;
+      color: white;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #e68900;
+    }
+  </style>
+</head>
+<body>
+  <h2>🎂 Personaliza tu Etiqueta 🎂</h2>
+  <input type="text" id="nombre" placeholder="Nombre del cumpleañero" oninput="dibujar()">
+
+  <br>
+  <canvas id="canvas" width="600" height="400"></canvas>
+
+  <div class="botones">
+    <button onclick="descargar()">⬇ Descargar Etiqueta</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    const img = new Image();
+    img.src = "etiqueta.png"; // tu diseño base de la etiqueta
+    img.onload = () => dibujar();
+
+    function dibujar() {
+      const texto = document.getElementById("nombre").value || "Tu Nombre";
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      // 🎨 Estilo de texto tipo Photoshop
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+      gradient.addColorStop("0", "#FFD700"); // dorado
+      gradient.addColorStop("1", "#FF4500"); // naranja fuerte
+
+      ctx.font = "bold 50px Arial";
+      ctx.fillStyle = gradient;
+      ctx.shadowColor = "black";
+      ctx.shadowBlur = 10;
+      ctx.textAlign = "center";
+
+      // Ajusta Y según dónde quieras que salga el nombre
+      ctx.fillText(texto, canvas.width / 2, 320);
+    }
+
+    function descargar() {
+      const enlace = document.createElement("a");
+      enlace.download = "etiqueta.png"; 
+      enlace.href = canvas.toDataURL("image/png"); 
+      enlace.click();
+    }
+  </script>
+</body>
+</html>
