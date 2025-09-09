@@ -12,6 +12,8 @@
     #canvas {
       border: 1px solid #ccc;
       margin-top: 20px;
+      max-width: 100%;
+      height: auto;
     }
     .botones {
       margin-top: 15px;
@@ -37,7 +39,8 @@
   <input type="text" id="nombre" placeholder="Nombre del cumpleañero" oninput="dibujar()">
 
   <br>
-  <canvas id="canvas" width="600" height="400"></canvas>
+  <!-- 🔹 El canvas ya no tiene ancho/alto fijo -->
+  <canvas id="canvas"></canvas>
 
   <div class="botones">
     <button onclick="descargar()">⬇ Descargar Etiqueta</button>
@@ -48,35 +51,25 @@
     const ctx = canvas.getContext("2d");
 
     const img = new Image();
-    img.src = "etiqueta.png"; // tu diseño base de la etiqueta
-    img.onload = () => dibujar();
+    img.src = "etiqueta.png"; // Asegúrate de tener este archivo en el mismo repo
+    img.onload = () => {
+      // 🔹 Ajustamos el canvas al tamaño real de la imagen
+      canvas.width = img.width;
+      canvas.height = img.height;
+      dibujar();
+    };
 
     function dibujar() {
       const texto = document.getElementById("nombre").value || "Tu Nombre";
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-      // 🎨 Estilo de texto tipo Photoshop
+      // 🎨 Estilo del texto
       const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
       gradient.addColorStop("0", "#FFD700"); // dorado
       gradient.addColorStop("1", "#FF4500"); // naranja fuerte
 
-      ctx.font = "bold 50px Arial";
+      ctx.font = "bold 60px Arial"; // Ajusta el tamaño al diseño
       ctx.fillStyle = gradient;
       ctx.shadowColor = "black";
-      ctx.shadowBlur = 10;
-      ctx.textAlign = "center";
-
-      // Ajusta Y según dónde quieras que salga el nombre
-      ctx.fillText(texto, canvas.width / 2, 320);
-    }
-
-    function descargar() {
-      const enlace = document.createElement("a");
-      enlace.download = "etiqueta.png"; 
-      enlace.href = canvas.toDataURL("image/png"); 
-      enlace.click();
-    }
-  </script>
-</body>
-</html>
+      ctx.shado
