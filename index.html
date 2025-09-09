@@ -98,3 +98,308 @@
         <div style="margin-top:10px;font-size:13px;color:var(--muted)">
           <strong>Nota:</strong> los diseños de pago requieren completar el pago antes de recibir el archivo.
         </div>
+      </aside>
+    </div>
+
+    <footer>
+      <div>Recuerda: usa imágenes con licencia si son temáticas con derechos. Aquí usamos IDs internos para cada modelo.</div>
+    </footer>
+  </div>
+
+  <script>
+  /***********************
+   *  CONFIG (ajusta)    *
+   ***********************/
+  const BACKEND_URL = 'https://your-backend.example.com/receive'; // reemplaza por tu Apps Script Web App URL (doPost)
+  const PAYPAL_CLIENT_ID_PLACEHOLDER = 'YOUR_PAYPAL_CLIENT_ID'; // reemplaza en el script tag arriba también
+
+  // Modelos: usa nombres de archivos genéricos (no marcas)
+  // Sube estas imágenes al repo (same folder) o usa rutas absolutas
+  const MODELS = [
+    { id: 'm_01', title: 'Diseño A - Etiqueta', thumb: 'thumb01.png', mockup: 'mockup01.png', price: 0 },
+    { id: 'm_02', title: 'Diseño B - Cupcake',  thumb: 'thumb02.png', mockup: 'mockup02.png', price: 0 },
+    { id: 'm_03', title: 'Diseño C - Invitación', thumb: 'thumb03.png', mockup: 'mockup03.png', price: 1.99 },
+    { id: 'm_04', title: 'Diseño D - Sticker',    thumb: 'thumb04.png', mockup: 'mockup04.png', price: 0.99 },
+    { id: 'm_05', title: 'Diseño E - Etiqueta2',  thumb: 'thumb05.png', mockup: 'mockup05.png', price: 0 }
+  ];
+  /***********************
+   *  FIN CONFIG         *
+   ***********************/
+
+  // Estado
+  let selectedModel = MODELS[0];
+  let loadedMockupImage = null;
+
+  // DOM
+  const canvas = document.getElementById('mockupCanvas');
+  const ctx = canvas.getContext('2d');
+  const nameInput = document.getElementById('nameInput');
+  const emailInput = document.getElementById('emailInput');
+  const thumbs = document.getElementById('thumbs');
+  const btnSend = document.getElementById('btnSend');
+  const btnPreviewPDF = document.getElementById('btnPreviewPDF');
+  const paypalContainer = document.getElementById('paypal-button-container');
+
+  // Inicial: generar galería
+  function initGallery(){
+    MODELS.forEach((m, idx) => {
+      const div = document.createElement('div');
+      div.className = 'thumb' + (idx===0 ? ' selected':'' );
+      div.dataset.id = m.id;
+      div.innerHTML = `<img src="${m.thumb}" alt="${m.title}">`;
+      div.addEventListener('click', ()=> {
+        document.querySelectorAll('.thumb').forEach(t=>t.classList.remove('selected'));
+        div.classList.add('selected');
+        selectModel(m.id);
+      });
+      thumbs.appendChild(div);
+    });
+  }
+
+  // Seleccionar modelo por id
+  function selectModel(id){
+    const m = MODELS.find(x=>x.id===id);
+    if(!m) return;
+    selectedModel = m;
+    loadMockup(selectedModel.mockup);
+    render(); // actualiza preview
+    // Si es pago, mostrar precio y el contenedor de PayPal
+    if(selectedModel.price > 0){
+      paypalContainer.style.display = 'block';
+      renderPayPal(selectedModel.price);
+    } else {
+      paypalContainer.style.display = 'none';
+      paypalContainer.innerHTML = '';
+    }
+  }
+
+  // Cargar mockup (imagen grande centrada)
+  function loadMockup(src){
+    const img = new Image();
+    img.src = src;
+    img.onload = () => {
+      loadedMockupImage = img;
+      // Ajustar canvas al tamañoreal de la imagen (asume imágenes en px reales)
+      canvas.width = img.width;
+      canvas.height = img.height;
+      render();
+    };
+    img.onerror = () => {
+      // fallback pequeño canvas si no existe la imagen
+      canvas.width = 600; canvas.height = 400;
+      loadedMockupImage = null;
+      render();
+    };
+  }
+
+  // Render: dibuja mockup y texto en la zona predeterminada
+  function render(){
+    // limpia
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    if(loadedMockupImage){
+      ctx.drawImage(loadedMockupImage, 0, 0, canvas.width, canvas.height);
+    } else {
+      // placeholder
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle='#eee';
+      ctx.fillRect(20,20,canvas.width-40,canvas.height-40);
+    }
+
+    // texto
+    const text = (nameInput.value || 'TU NOMBRE').toUpperCase();
+    // Estilo tipo "fusión" (degradado + sombra)
+    const fontSize = Math.round(Math.max(18, canvas.width * 0.06)); // tamaño relative al ancho
+    ctx.font = `bold ${fontSize}px "Arial"`;
+    ctx.textAlign = 'center';
+    // shadow
+    ctx.shadowColor = 'rgba(0,0,0,0.45)';
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 3;
+
+    // gradient
+    const g = ctx.createLinearGradient(0, 0, canvas.width, 0);
+    g.addColorStop(0, '#FFD700');
+    g.addColorStop(0.5, '#FF7A18');
+    g.addColorStop(1, '#FF4500');
+    ctx.fillStyle = g;
+
+    // Posición fija: ajusta estas coordenadas según tu mockup (X,Y)
+    const x = canvas.width / 2;
+    const y = canvas.height - Math.round(canvas.height * 0.18); // ejemplo: 18% desde abajo
+    ctx.fillText(text, x, y);
+
+    // reset shadow for other elements
+    ctx.shadowColor = 'transparent';
+  }
+
+  // Genera PDF A4 con la imagen del canvas centrada en la página
+  async function generateA4Pdf() {
+    const { jsPDF } = window.jspdf;
+    // A4 portrait in points (pt): 595.28 x 841.89
+    const pdf = new jsPDF({unit:'pt', format:'a4', orientation:'portrait'});
+    const margin = 20; // pts
+    const pageW = pdf.internal.pageSize.getWidth() - margin * 2;
+    const pageH = pdf.internal.pageSize.getHeight() - margin * 2;
+
+    // Convertir canvas actual a dataURL
+    const imgData = canvas.toDataURL('image/png');
+
+    // Calcular tamaño restante conservando aspecto
+    const imgWpx = canvas.width;
+    const imgHpx = canvas.height;
+    // jsPDF expects px image scaled to points; we'll scale proportionally to pageW
+    const ratio = Math.min(pageW / imgWpx, pageH / imgHpx);
+    const drawW = imgWpx * ratio;
+    const drawH = imgHpx * ratio;
+    const x = (pdf.internal.pageSize.getWidth() - drawW) / 2;
+    const y = margin + ((pageH - drawH) / 2);
+
+    pdf.addImage(imgData, 'PNG', x, y, drawW, drawH);
+    return pdf;
+  }
+
+  // Enviar PDF/registro al backend
+  async function sendToBackend(pdfBlob, extra = {}) {
+    // Convierte a base64
+    const reader = new FileReader();
+    return new Promise((resolve, reject) => {
+      reader.onloadend = async () => {
+        const base64data = reader.result.split(',')[1]; // sin el header
+        const payload = {
+          modelId: selectedModel.id,
+          name: nameInput.value || '',
+          email: emailInput.value || '',
+          paid: !!extra.paid,
+          txId: extra.txId || '',
+          pdfBase64: base64data,
+          timestamp: new Date().toISOString()
+        };
+        try {
+          const resp = await fetch(BACKEND_URL, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(payload)
+          });
+          const json = await resp.json();
+          resolve(json);
+        } catch(err){
+          reject(err);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(pdfBlob);
+    });
+  }
+
+  // Evento: Generar vista previa PDF
+  btnPreviewPDF.addEventListener('click', async () => {
+    try {
+      const pdf = await generateA4Pdf();
+      // abrir en nueva pestaña para ver
+      window.open(pdf.output('bloburl'), '_blank');
+    } catch(err){
+      alert('Error generando PDF: ' + err.toString());
+    }
+  });
+
+  // Evento: Descargar / Enviar (gratuitos or pago)
+  btnSend.addEventListener('click', async () => {
+    const email = emailInput.value && emailInput.value.trim();
+    if(!email) { alert('Ingresa un correo válido para recibir tu archivo.'); return; }
+
+    // Generamos el PDF (cliente-side)
+    const pdf = await generateA4Pdf();
+    const pdfBlob = pdf.output('blob');
+
+    // Si el modelo es pago: lanzar PayPal y procesar en onApprove
+    if(selectedModel.price > 0){
+      // Mostrar instrucciones y renderizar botones PayPal
+      alert(`El modelo seleccionado cuesta $${selectedModel.price}. Se abrirá la ventana de pago PayPal.`);
+
+      // Renderizamos botones PayPal específicos a esta transacción
+      renderPayPalButton(selectedModel.price, async (txId) => {
+        // Tras pago exitoso, enviamos al backend con paid=true y txId
+        try {
+          const res = await sendToBackend(pdfBlob, {paid:true, txId});
+          if(res && res.success){
+            alert('¡Pago confirmado! En breve recibirás un correo con tu PDF.');
+          } else {
+            alert('Operación completada pero hubo un error registrando. Contacta al administrador.');
+          }
+        } catch(err){
+          alert('Error enviando al servidor: ' + err.toString());
+        }
+      });
+      return;
+    }
+
+    // Gratis: enviar directo al backend con paid=false
+    try {
+      const res = await sendToBackend(pdfBlob, {paid:false});
+      if(res && res.success){
+        alert('Listo — revisa tu correo en unos segundos (revisa spam).');
+      } else {
+        alert('Ocurrió un error en el servidor: '+(res.error||'Sin detalle'));
+      }
+    } catch(err){
+      alert('Error enviando al servidor: ' + err.toString());
+    }
+  });
+
+  /***************
+   *  PAYPAL HELP
+   ***************/
+  // Renderea botones PayPal global (solo para mostrar fija). Los botones específicos se renderizan por transacción.
+  function renderPayPal(amount){
+    // Render minimal PayPal button area (the actual payment per tx will call renderPayPalButton)
+    paypalContainer.innerHTML = `<div style="font-size:13px;color:#333">Precio: $${amount} — al pagar recibirás el archivo por correo.</div>`;
+  }
+
+  // Render buttons for a single transaction; callback on success returns txId
+  function renderPayPalButton(amount, onSuccess){
+    // Limpia contenedor y crea nuevo
+    paypalContainer.innerHTML = '';
+    const holder = document.createElement('div');
+    paypalContainer.appendChild(holder);
+
+    paypal.Buttons({
+      createOrder: function(data, actions) {
+        return actions.order.create({
+          purchase_units: [{
+            amount: { value: amount.toString() }
+          }]
+        });
+      },
+      onApprove: function(data, actions) {
+        return actions.order.capture().then(function(details) {
+          // details.id o captura del pago
+          const txId = details.id || (details.purchase_units && details.purchase_units[0] && details.purchase_units[0].payments && details.purchase_units[0].payments.captures && details.purchase_units[0].payments.captures[0].id) || '';
+          onSuccess(txId);
+          // limpiar UI
+          paypalContainer.innerHTML = '<div style="color:green;margin-top:8px;">Pago verificado. Procesando tu archivo...</div>';
+        });
+      },
+      onError: function(err){
+        alert('Error en el pago: ' + err.toString());
+      }
+    }).render(holder);
+  }
+
+  /*********************
+   * Inicialización
+   *********************/
+  // crea thumbs y selecciona primer mockup
+  initGallery();
+  selectModel(MODELS[0].id);
+
+  // eventos input -> redraw
+  nameInput.addEventListener('input', render);
+
+  // Nota: si subes imágenes con tamaños grandes, el canvas se ajusta a su tamaño real.
+  // Asegúrate que las imágenes mockupXX.png existan en el repo (o cambia rutas).
+  </script>
+</body>
+</html>
