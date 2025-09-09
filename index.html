@@ -1,90 +1,100 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Etiqueta de Cumpleaños</title>
+  <meta charset="utf-8" />
+  <title>Mockup Etiquetas - Editor</title>
+
+  <!-- jsPDF para crear PDF A4 en cliente -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- PayPal SDK: reemplaza YOUR_PAYPAL_CLIENT_ID por tu client-id real -->
+  <script src="https://www.paypal.com/sdk/js?client-id=YOUR_PAYPAL_CLIENT_ID&currency=USD"></script>
+
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    body { 
-      text-align: center; 
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
+    :root{
+      --max-width: 1100px;
+      --accent: #ff7a18;
+      --muted: #666;
     }
-    #canvas {
-      border: 1px solid #ccc;
-      margin-top: 20px;
-      max-width: 100%;
-      height: auto;
-    }
-    .botones {
-      margin-top: 15px;
-    }
-    button {
-      padding: 10px 20px;
-      margin: 5px;
-      font-size: 16px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      background: #ff9800;
-      color: white;
-      font-weight: bold;
-    }
-    button:hover {
-      background: #e68900;
-    }
+    body{font-family: Inter, Arial, sans-serif; margin:0; padding:20px; background:#fafafa; color:#222; display:flex; justify-content:center;}
+    .container{max-width:var(--max-width); width:100%;}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+    h1{font-size:20px;margin:0;}
+    .layout{display:grid;grid-template-columns: 1fr 360px; gap:18px; align-items:start;}
+    /* Mockup area */
+    .mockupCard{background:white;border-radius:10px;padding:18px;box-shadow:0 6px 20px rgba(0,0,0,0.06);text-align:center;}
+    #mockupWrap{display:flex;justify-content:center;padding:10px;}
+    canvas#mockupCanvas{border-radius:6px; max-width:100%; height:auto; box-shadow:0 6px 18px rgba(0,0,0,0.08);}
+    /* Controls */
+    .controls{background:white;padding:14px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.04);}
+    .field{margin-bottom:10px;text-align:left;}
+    .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;}
+    input[type="text"], input[type="email"]{width:100%;padding:10px;border-radius:6px;border:1px solid #e6e6e6;font-size:15px;}
+    .btn{display:inline-block;padding:10px 14px;border-radius:8px;border:0;cursor:pointer;font-weight:600;}
+    .btn-primary{background:var(--accent);color:white;}
+    .btn-outline{background:white;border:1px solid #ddd;color:#333;}
+    /* Gallery */
+    .gallery{margin-top:18px;background:white;padding:12px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.03);}
+    .thumbs{display:flex;gap:8px;flex-wrap:wrap;}
+    .thumb{width:80px;height:80px;border-radius:6px;overflow:hidden;border:2px solid transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;background:#f7f7f7;}
+    .thumb img{width:100%;height:100%;object-fit:cover;}
+    .thumb.selected{border-color:var(--accent);box-shadow:0 6px 18px rgba(255,122,24,0.14);}
+    .small{font-size:13px;color:var(--muted);margin-top:8px;}
+    /* Paypal container */
+    #paypal-button-container{margin-top:8px;}
+    footer{margin-top:18px;font-size:12px;color:var(--muted);}
+    @media(max-width:900px){ .layout{grid-template-columns:1fr; } .controls{order:2;} }
   </style>
 </head>
 <body>
-  <h2>🎂 Personaliza tu Etiqueta 🎂</h2>
-  <input type="text" id="nombre" placeholder="Nombre del cumpleañero" oninput="dibujar()">
+  <div class="container">
+    <header>
+      <h1>Editor Profesional de Mockups — Etiquetas</h1>
+      <div style="font-size:13px;color:var(--muted)">Preview → PDF A4 → Envío por correo</div>
+    </header>
 
-  <br>
-  <!-- 🔹 El canvas ya no tiene ancho/alto fijo -->
-  <canvas id="canvas"></canvas>
+    <div class="layout">
+      <!-- IZQUIERDA: Mockup -->
+      <div>
+        <div class="mockupCard">
+          <h3 style="margin-top:0">Cómo quedaría</h3>
+          <div id="mockupWrap">
+            <!-- Canvas dinámico -->
+            <canvas id="mockupCanvas"></canvas>
+          </div>
+          <div style="margin-top:12px;">
+            <div class="small">Este es solo el mockup central. Las miniaturas abajo son otros modelos.</div>
+          </div>
+        </div>
 
-  <div class="botones">
-    <button onclick="descargar()">⬇ Descargar Etiqueta</button>
-  </div>
+        <!-- Galería / separador -->
+        <div class="gallery" style="margin-top:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <strong>Otras plantillas</strong>
+            <span class="small">Haz click para elegir</span>
+          </div>
+          <div class="thumbs" id="thumbs"></div>
+        </div>
+      </div>
 
-  <script>
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
+      <!-- DERECHA: Controles -->
+      <aside class="controls">
+        <div class="field">
+          <label>Nombre a personalizar</label>
+          <input id="nameInput" type="text" placeholder="Ej. Ana" />
+        </div>
+        <div class="field">
+          <label>Correo electrónico (para recibir el PDF)</label>
+          <input id="emailInput" type="email" placeholder="correo@ejemplo.com" />
+        </div>
 
-    const img = new Image();
-    img.src = "etiqueta.png"; // Asegúrate de tener este archivo en el mismo repo
-    img.onload = () => {
-      // 🔹 Ajustamos el canvas al tamaño real de la imagen
-      canvas.width = img.width;
-      canvas.height = img.height;
-      dibujar();
-    };
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+          <button id="btnPreviewPDF" class="btn btn-outline">Ver/Generar PDF A4</button>
+          <button id="btnSend" class="btn btn-primary">Descargar / Enviar</button>
+        </div>
 
-    function dibujar() {
-      const texto = document.getElementById("nombre").value || "Tu Nombre";
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        <div id="paypal-button-container" style="display:none"></div>
 
-      // 🎨 Estilo del texto
-      const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
-      gradient.addColorStop("0", "#FFD700"); // dorado
-      gradient.addColorStop("1", "#FF4500"); // naranja fuerte
-
-      ctx.font = "bold 60px Arial"; // Ajusta el tamaño al diseño
-      ctx.fillStyle = gradient;
-      ctx.shadowColor = "black";
-      ctx.shadowBlur = 10;
-      ctx.textAlign = "center";
-
-      // 🔹 Cambia la posición Y según tu diseño de etiqueta
-      ctx.fillText(texto, canvas.width / 2, canvas.height - 100);
-    }
-
-    function descargar() {
-      const enlace = document.createElement("a");
-      enlace.download = "etiqueta.png";
-      enlace.href = canvas.toDataURL("image/png");
-      enlace.click();
-    }
-  </script>
-</body>
-</html>
+        <div style="margin-top:10px;font-size:13px;color:var(--muted)">
+          <strong>Nota:</strong> los diseños de pago requieren completar el pago antes de recibir el archivo.
+        </div>
