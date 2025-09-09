@@ -1,0 +1,78 @@
+body {
+  font-family: Arial, sans-serif;
+  background: linear-gradient(to bottom, #fff, #caa52a);
+  text-align: center;
+  margin: 0;
+  padding: 0;
+}
+
+.preview {
+  margin: 20px auto;
+  width: 800px;
+  height: 500px;
+  background: #f5f5f5;
+  border: 2px solid #ddd;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+canvas {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.formulario {
+  margin: 20px auto;
+  width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.formulario label {
+  font-weight: bold;
+  text-align: left;
+}
+
+.formulario input {
+  padding: 10px;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.formulario button {
+  background: #f7b731;
+  color: #fff;
+  padding: 12px;
+  border: none;
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.galeria {
+  margin: 30px auto;
+  display: grid;
+  grid-template-columns: repeat(3, 150px);
+  gap: 20px;
+  justify-content: center;
+}
+
+.galeria button {
+  background: #fff;
+  border: 2px solid #ddd;
+  padding: 20px;
+  border-radius: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.galeria button:hover {
+  transform: scale(1.1);
+  background: #f7b731;
+  color: #fff;
+}
